@@ -75,7 +75,7 @@ export class Player {
 
   public canScore(score?: number) {
     if (!score) return false;
-    // if (!this.hasStarted && score < 500) return false;
+    if (!this.hasStarted && score < 500) return false;
     return this.getScore() + score <= 10000;
   }
 

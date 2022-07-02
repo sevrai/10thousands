@@ -67,8 +67,9 @@ export class Roll {
   }
 
   public getStraight() {
+    const sum = this.values.reduce((acc, v) => acc + v, 0);
     const setValues = new Set(this.values);
-    const isStraight = setValues.size === 5;
+    const isStraight = setValues.size === 5 && (sum === 15 || sum === 20);
     return this.values.map(() => isStraight);
   }
 

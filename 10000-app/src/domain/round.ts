@@ -36,7 +36,7 @@ export class Round {
   }
 
   public reuseRound() {
-    this.activeRoll = undefined
+    this.activeRoll = undefined;
   }
 
   public getRoll() {

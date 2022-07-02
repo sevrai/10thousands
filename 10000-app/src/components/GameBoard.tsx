@@ -32,9 +32,10 @@ export class GameBoard extends React.Component<{}, GameBoardState> {
     return this.getActiveRound().isLost();
   };
 
-  isPlaying = () => !this.isLost() && !this.state.previousRound
+  isPlaying = () => !this.isLost() && !this.state.previousRound;
 
-  canReuse = () => this.state.game.activePlayer.getNextPlayer().hasStarted && !this.isLost()
+  canReuse = () =>
+    this.state.game.activePlayer.getNextPlayer().hasStarted && !this.isLost();
 
   canCollect = () => {
     return this.state.game.activePlayer.canScore(
@@ -44,16 +45,17 @@ export class GameBoard extends React.Component<{}, GameBoardState> {
   };
 
   rollDices = () => {
-    if (this.getActiveRound().getRoll()) {
-      this.getActiveRound().validateSelection();
-    }
     const round = this.getActiveRound();
+    if (round.getRoll()) {
+      round.validateSelection();
+      round.convertFivePair();
+    }
     round.rollDices();
     this.setState({ game: this.state.game });
   };
 
   selectDice = (idx: number) => {
-    if (!this.isPlaying()) return
+    if (!this.isPlaying()) return;
     this.getActiveRound().toggleSelectDice(idx);
     this.setState({ game: this.state.game });
   };
@@ -61,19 +63,18 @@ export class GameBoard extends React.Component<{}, GameBoardState> {
   stopRound = () => {
     this.getActiveRound().validateSelection();
     this.state.game.markScore();
-    this.setState({ previousRound: this.getActiveRound() })
-
+    this.setState({ previousRound: this.getActiveRound() });
   };
 
   startNewRound = () => {
     this.state.game.nextPlayer(false);
-    this.rollDices()
+    this.rollDices();
     this.setState({ game: this.state.game, previousRound: undefined });
-  }
+  };
 
   reuseRound = () => {
     this.state.game.nextPlayer(true);
-    this.rollDices()
+    this.rollDices();
     this.setState({ game: this.state.game, previousRound: undefined });
   };
 
@@ -82,11 +83,10 @@ export class GameBoard extends React.Component<{}, GameBoardState> {
       .getRoll()
       ?.getValues()
       .map((dice, idx) => {
-        let className = "dice"
-          if(this.getActiveRound().isSelectedDice(idx) )
-          className += " selected-dice" 
-          if (!this.isPlaying())
-          className += " disabled-dice"
+        let className = "dice";
+        if (this.getActiveRound().isSelectedDice(idx))
+          className += " selected-dice";
+        if (!this.isPlaying()) className += " disabled-dice";
         return (
           <div
             className={className}
@@ -151,10 +151,7 @@ export class GameBoard extends React.Component<{}, GameBoardState> {
         {!this.isPlaying() ? (
           <>
             <button onClick={this.startNewRound}>Recommencer</button>
-            <button
-              disabled={!this.canReuse()}
-              onClick={this.reuseRound}
-            >
+            <button disabled={!this.canReuse()} onClick={this.reuseRound}>
               Récupérer ({this.getActiveRound().getRoundScore()})
             </button>
           </>
