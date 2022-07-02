@@ -161,7 +161,88 @@ class Roll {
   }
 }
 
-type Player = string;
+class Score {
+  private invalidated: boolean;
+  constructor(private _value: number) {
+    this.invalidated = false;
+  }
+
+  public invalidate() {
+    this.invalidated = true;
+  }
+
+  get value() {
+    return this.invalidated ? 0 : this._value;
+  }
+}
+
+class Player {
+  private scores: Score[];
+  public nextPlayer!: Player;
+  private nullRoundCount: number;
+  private active: boolean;
+  hasStarted: boolean;
+  constructor(private name: PlayerName) {
+    this.scores = [];
+    this.nullRoundCount = 0;
+    this.active = false;
+    this.hasStarted = false;
+  }
+
+  public startRound(): Player {
+    this.active = true;
+    return this;
+  }
+
+  public endRound(): Player {
+    this.active = false;
+    this.nextPlayer.setActive();
+    return this.nextPlayer;
+  }
+
+  protected setActive() {
+    this.active = true;
+  }
+  public isActive() {
+    return this.active;
+  }
+  public setNextPlayer(player: Player) {
+    this.nextPlayer = player;
+  }
+
+  public getName() {
+    return this.name;
+  }
+
+  public canScore(score: number) {
+    if (!this.hasStarted && score < 500) return false;
+    return this.getScore() + score <= 10000;
+  }
+
+  public addScore(roundScore: number): number {
+    if (
+      this.getScore() > 0 &&
+      roundScore === 0 &&
+      (this.nullRoundCount = ++this.nullRoundCount % 3) === 0
+    )
+      this.resetScore();
+    else this.scores.push(new Score(roundScore));
+
+    return this.getScore();
+  }
+
+  public getScore() {
+    return this.scores.reduce((total, score) => total + score.value, 0);
+  }
+  public resetScore() {
+    const lastScore = this.scores.length
+      ? this.scores[this.scores.length - 1]
+      : undefined;
+    lastScore?.invalidate();
+  }
+}
+
+type PlayerName = string;
 
 type Value = number;
 
@@ -169,14 +250,14 @@ type Index = number; //0 | 1 | 2 | 3 | 4;
 
 class Round {
   private remainingDices: number;
-  private activeRoll!: Roll ;
+  private activeRoll!: Roll;
   private currentDiceSelection: Set<Index>;
   stackedSelections: Roll[];
 
   constructor(private player: Player) {
     this.remainingDices = 5;
-    this.currentDiceSelection = new Set()
-    this.stackedSelections = []
+    this.currentDiceSelection = new Set();
+    this.stackedSelections = [];
   }
 
   private updateRollSize(selectionSize: number) {
@@ -209,16 +290,19 @@ class Round {
     return false;
   }
 
-  public validateSelection() {
-      const selection = new Roll(
-        [...this.currentDiceSelection.values()].map(
-          (idx) => this.activeRoll.getValues()[idx]
-        )
+  private getSelectionRoll() {
+    return new Roll(
+      [...this.currentDiceSelection.values()].map(
+        (idx) => this.activeRoll.getValues()[idx]
       )
+    );
+  }
+  public validateSelection() {
+    const selection = this.getSelectionRoll();
     this.stackedSelections.push(selection);
     this.updateRollSize(this.currentDiceSelection.size);
     this.currentDiceSelection = new Set();
-    return selection
+    return selection;
   }
 
   public convertFivePair() {
@@ -230,6 +314,10 @@ class Round {
     return hasBeenConverted;
   }
 
+  public getSelectionScore() {
+    return this.getSelectionRoll().getScore();
+  }
+
   public getRoundScore() {
     return this.stackedSelections.reduce(
       (total, selection) => total + selection.getScore(),
@@ -239,39 +327,67 @@ class Round {
 }
 
 class Game {
-    private activePlayer: Player
-    private activeRound!: Round
-    constructor(private players : Player[]){
-        if (this.players.length < 2) throw new Error("2 players minimum")
-        this.activePlayer = players[0]
-    }
+  private activePlayer: Player;
+  private activeRound!: Round;
+  private players: Player[];
+  constructor(playerNames: PlayerName[]) {
+    if (playerNames.length < 2) throw new Error("2 players minimum");
+    this.players = playerNames.map((name) => new Player(name));
+    this.players.forEach((player, idx) =>
+      player.setNextPlayer(this.players[idx + 1] ?? this.players[0])
+    );
+    this.activePlayer = this.players[0].startRound();
+  }
 
-    public startRound() {
-        this.activeRound = new Round(this.activePlayer)
-    }
+  public startRound() {
+    this.activeRound = new Round(this.activePlayer);
+  }
 
-    public play() {
-        const roll = this.activeRound.rollDices()
-        console.log({roll: roll.getValues()})
-        const collectibleDices = roll.getCollectibleDices()
-        collectibleDices.forEach((isCollectible, idx) => {
-            if(isCollectible)
-                this.activeRound.selectDice(idx)
-        })
-        const selection = this.activeRound.validateSelection()
-        console.log({selection: selection.getValues()})
+  public play() {
+    const roll = this.activeRound.rollDices();
+    console.log({ roll: roll.getValues() });
+    const collectibleDices = roll.getCollectibleDices();
+    console.log({ collectibleDices, pendingScore: roll.getScore() });
+    const index = collectibleDices.findIndex((dice) => dice);
+    this.activeRound.selectDice(index);
+    console.log({ selectionScore: this.activeRound.getSelectionScore() });
+    // collectibleDices.forEach((isCollectible, idx) => {
+    //   if (isCollectible) {this.activeRound.selectDice(idx);
+    // });
+    const selection = this.activeRound.validateSelection();
+    console.log({ selection: selection.getValues() });
 
-        console.log({score: this.activeRound.getRoundScore()})
-        if (this.activeRound.isLost()) {
-            console.log("round lost. Next player")
-            return
-        }
-        console.log("wanna continue ?")
-        console.log("next roll")
-        this.play()
+    console.log({ score: this.activeRound.getRoundScore() });
+    if (this.activeRound.isLost()) {
+      console.log("round lost. Next player");
+      return;
     }
+    console.log("wanna continue ?");
+    console.log("next roll");
+    this.play();
+  }
+
+  public rollDice() {
+    const roll = this.activeRound.rollDices();
+    const dices = roll.getValues();
+    const collectibleDices = roll.getCollectibleDices();
+    const canRollAgain = !this.activeRound.isLost();
+    const pendingScore = roll.getScore();
+  }
+
+  public endRound() {
+    const newScore = this.activePlayer.addScore(
+      this.activeRound.getRoundScore()
+    );
+    this.players.forEach((player) => {
+      if (!player.isActive() && player.getScore() === newScore)
+        player.resetScore();
+    });
+  }
+
+  public nextPlayer() {}
 }
 
-const game = new Game(["Mathou", "Séverin"])
-game.startRound()
-game.play()
+const game = new Game(["Mathou", "Séverin"]);
+game.startRound();
+game.play();

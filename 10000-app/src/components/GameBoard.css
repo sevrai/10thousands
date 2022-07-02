@@ -1,0 +1,31 @@
+.dices {
+  display: flex;
+  flex-direction: row;
+}
+
+.dice {
+  height: 24px;
+  width: 24px;
+  border: 1px solid;
+  margin: 4px;
+}
+
+.selected-dice {
+  background-color: red;
+  color: white;
+}
+
+.disabled-dice {
+    opacity: 50%;
+}
+
+.scoreboard {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+}
+
+.user-user {
+  display: flex;
+  flex-direction: column;
+}
