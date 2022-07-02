@@ -1,6 +1,7 @@
 .dices {
   display: flex;
   flex-direction: row;
+  justify-content: center;
 }
 
 .dice {
@@ -23,6 +24,10 @@
   display: flex;
   flex-direction: row;
   justify-content: space-around;
+}
+
+.invalidated {
+  text-decoration: line-through;
 }
 
 .user-user {
